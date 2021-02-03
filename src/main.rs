@@ -2,11 +2,15 @@
 #![no_main]
 #![feature(llvm_asm)]
 #![feature(global_asm)]
+#![feature(panic_info_message)]
 
+#[macro_use]
 mod console;
 mod lang_items;
 
-const SYSCALL_EXIT: usize = 93;
+global_asm!(include_str!("entry.asm"));
+
+const SBI_SHUTDOWN: usize = 8;
 
 fn syscall(id: usize, args: [usize; 3]) -> isize {
     let mut ret: isize;
@@ -21,12 +25,22 @@ fn syscall(id: usize, args: [usize; 3]) -> isize {
     ret
 }
 
-pub fn sys_exit(xstate: i32) -> isize {
-    syscall(SYSCALL_EXIT, [xstate as usize, 0, 0])
+pub fn shutdown() -> ! {
+    syscall(SBI_SHUTDOWN, [0, 0, 0]);
+    panic!("It should shutdown!");
+}
+
+fn clear_bss() {
+    extern "C" {
+        fn sbss();
+        fn ebss();
+    }
+    println!("clear bss");
+    (sbss as usize..ebss as usize).for_each(|a| { unsafe { (a as *mut u8).write_volatile(0) } });
 }
 
 #[no_mangle]
-extern "C" fn _start() {
-    println!("Hello, world!");
-    sys_exit(9);
+pub fn rust_main() {
+    println!("hello world");
+    shutdown();
 }

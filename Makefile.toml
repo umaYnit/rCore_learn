@@ -9,7 +9,7 @@ KERNEL_ENTRY_PA = 0x80020000
 
 QEMU_BINARY = "C:\\tools\\qemu\\qemu-system-riscv64.exe"
 
-BOOTLOADER = { value = "rustsbi-qemu.bin", condition = { env_not_set = ["BOOTLOADER"] } }
+BOOTLOADER = { value = "bootloader/rustsbi-qemu.bin", condition = { env_not_set = ["BOOTLOADER"] } }
 
 
 [tasks.elf]
@@ -30,6 +30,14 @@ args = ["-machine", "virt",
     "-device", "loader,file=${KERNEL_BIN},addr=${KERNEL_ENTRY_PA}"]
 dependencies = ["kernel"]
 
+[tasks.qemudebug]
+command = "${QEMU_BINARY}"
+args = ["-machine", "virt",
+    "-nographic",
+    "-bios", "${BOOTLOADER}",
+    "-device", "loader,file=${KERNEL_BIN},addr=${KERNEL_ENTRY_PA}",
+    "-S", "-s"]
+dependencies = ["kernel"]
 
 [tasks.qemuasm]
 command = "${QEMU_BINARY}"

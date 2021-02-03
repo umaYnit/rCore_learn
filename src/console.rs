@@ -2,19 +2,19 @@ use core::fmt::{self, Write};
 
 use crate::syscall;
 
-const SYSCALL_WRITE: usize = 64;
+const SBI_CONSOLE_PUTCHAR: usize = 1;
 
-pub fn sys_write(fd: usize, buffer: &[u8]) -> isize {
-    syscall(SYSCALL_WRITE, [fd, buffer.as_ptr() as usize, buffer.len()])
+pub fn console_putchar(c: usize) -> isize {
+    syscall(SBI_CONSOLE_PUTCHAR, [c, 0, 0])
 }
 
 struct Stdout;
-// 1代表标准输出， 也就是输出到屏幕
-const STDOUT: usize = 1;
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        sys_write(STDOUT, s.as_bytes());
+        for c in s.chars() {
+            console_putchar(c as usize);
+        }
         Ok(())
     }
 }
