@@ -1,0 +1,63 @@
+[env]
+MODE = { value = "release", condition = { env_not_set = ["MODE"] } }
+
+TARGET = "riscv64gc-unknown-none-elf"
+
+KERNEL_ELF = "target/${TARGET}/${MODE}/${CARGO_MAKE_CRATE_NAME}"
+KERNEL_BIN = "${KERNEL_ELF}.bin"
+KERNEL_ENTRY_PA = 0x80020000
+
+QEMU_BINARY = "C:\\tools\\qemu\\qemu-system-riscv64.exe"
+
+BOOTLOADER = { value = "rustsbi-qemu.bin", condition = { env_not_set = ["BOOTLOADER"] } }
+
+
+[tasks.elf]
+command = "cargo"
+args = ["build", "--release"]
+
+[tasks.kernel]
+command = "rust-objcopy"
+args = ["--binary-architecture=riscv64",
+    "--strip-all", "-O", "binary", "${KERNEL_ELF}", "${KERNEL_BIN}"]
+dependencies = ["elf"]
+
+[tasks.qemu]
+command = "${QEMU_BINARY}"
+args = ["-machine", "virt",
+    "-nographic",
+    "-bios", "${BOOTLOADER}",
+    "-device", "loader,file=${KERNEL_BIN},addr=${KERNEL_ENTRY_PA}"]
+dependencies = ["kernel"]
+
+
+[tasks.qemuasm]
+command = "${QEMU_BINARY}"
+args = ["-kernel", "${KERNEL_BIN}", "-d", "in_asm"]
+dependencies = ["kernel"]
+
+[tasks.clippy]
+command = "cargo"
+args = ["clippy", "@@split(COMPILER_ARGS, )"]
+
+
+# this issue: https://github.com/rust-embedded/cargo-binutils/issues/89
+[tasks.readelf]
+command = "rust-readobj"
+args = ["--elf-output-style=GNU", "--headers", "${KERNEL_ELF}"]
+dependencies = ["elf"]
+
+[tasks.objdump]
+script_runner = "@shell"
+script = "rust-objdump --disassemble --demangle --section=.text --section=.got ${KERNEL_ELF} | rustfilt"
+dependencies = ["elf"]
+
+[tasks.nm]
+script_runner = "@shell"
+script = "rust-nm --demangle --print-size ${KERNEL_ELF} | sort | rustfilt"
+dependencies = ["elf"]
+
+# For rust-analyzer
+[tasks.check]
+command = "cargo"
+args = ["check", "--message-format=json"]
