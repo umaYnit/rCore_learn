@@ -1,12 +1,6 @@
 use core::fmt::{self, Write};
 
-use crate::syscall;
-
-const SBI_CONSOLE_PUTCHAR: usize = 1;
-
-pub fn console_putchar(c: usize) -> isize {
-    syscall(SBI_CONSOLE_PUTCHAR, [c, 0, 0])
-}
+use crate::sbi::console_putchar;
 
 struct Stdout;
 
