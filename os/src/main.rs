@@ -4,7 +4,6 @@
 #![feature(global_asm)]
 #![feature(panic_info_message)]
 
-use crate::sbi::shutdown;
 
 #[macro_use]
 mod console;

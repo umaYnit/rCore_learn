@@ -2,17 +2,36 @@
 
 实验教程地址：https://rcore-os.github.io/rCore-Tutorial-Book-v3/index.html
 
-原实验构建环境为ubuntu，提供了模拟器和真机等多种运行环境的模式。
+原实验构建环境为 ubuntu，提供了模拟器和真机等多种运行环境的模式。
 
-笔者这里构建环境使用win10，运行环境为qemu，并且为了方便，构建工具从makefile改变为[cargo-make](https://github.com/sagiegurari/cargo-make)，配置文件为Makefile.toml。
+笔者这里构建环境使用 win10，运行环境为 qemu，并且为了方便，构建工具从 makefile 改变为 [cargo-make](https://github.com/sagiegurari/cargo-make) ，配置文件为 Makefile.toml。
 
 **提醒：最好按照原教程中要求的环境和数据进行测试，以免由于多种原因出错后难以寻找。**
+
+
+
+学习笔记记录
+
+RISC-V寄存器
+
+| 寄存器组 | 保存者       | 功能                                             |
+| -------- | ------------ | ------------------------------------------------ |
+| a0~a7    | 调用者保存   | 用来传递输入参数。特别的a0和a1用来保存返回值     |
+| t0~t6    | 调用者保存   | 作为临时寄存器使用，在函数中可以随意使用无需保存 |
+| s0~s11   | 被调用者保存 | 作为临时寄存器使用，保存后才能在函数种使用       |
+|          |              |                                                  |
+
+![](extra/md_img/risc-v寄存器图.png)
+
+ 
+
+总共32个通用寄存器x0~x31。x0是恒0寄存器
 
 ## 问题记录与反馈
 
 #### 第一章第四节 [构建用户态执行环境](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/3-1-mini-rt-usrland.html)
 
-在本章中，构建的是用户态的执行程序，所以模拟器也需要可直接执行用户态的`qemu-riscv64`，在查询了qemu官方的资料后得知，win上是不行的。故通过wsl2上的`qemu-riscv64`来运行这节的构建产物。
+在本章中，构建的是用户态的执行程序，所以模拟器也需要可直接执行用户态的 `qemu-riscv64`，在查询了 qemu 官方的资料后得知，win 上是不行的。故通过 wsl2 上的 `qemu-riscv64` 来运行这节的构建产物。
 
 在尝试实验时我遇到了如下两个问题：
 
@@ -47,3 +66,7 @@
   > 我们需要提供清零的 `clear_bss()` 函数。此函数属于执行环境，并在执行环境调用 应用程序的 `rust_main` 主函数前，把 `.bss` 段的全局数据清零。
 
 我理解的是只需要把函数声明在这里，会自动在`rust_main`前调用。教程里这一节也确实没有调用相关的信息。但是在执行时，感觉像是没有被调用的。
+
+#### 第二章第三节 [实现应用程序](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter2/2application.html)
+
+- [系统调用](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter2/2application.html#id6) 部分内容，讲到 "变量 `ret` 必须为可变 绑定"，经测试好像不需要。
