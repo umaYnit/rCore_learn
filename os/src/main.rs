@@ -10,6 +10,8 @@ mod console;
 mod lang_items;
 mod sbi;
 mod batch;
+mod trap;
+mod syscall;
 
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("link_app.S"));
@@ -24,9 +26,10 @@ fn clear_bss() {
 }
 
 #[no_mangle]
-pub fn rust_main() {
+pub fn rust_main() -> ! {
     clear_bss();
     println!("[kernel] Hello, world!");
+    trap::init();
     batch::init();
-    panic!("Shutdown machine!");
+    batch::run_next_app();
 }

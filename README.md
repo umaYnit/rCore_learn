@@ -25,7 +25,25 @@ RISC-V寄存器
 
  
 
-总共32个通用寄存器x0~x31。x0是恒0寄存器
+总共32个通用寄存器x0~x31。x0是恒0寄存器。
+
+当从一般意义上讨论 RISC-V 架构的 Trap 机制时，通常需要注意两点：
+
+- 在 触发 Trap 之前 CPU 运行在哪个特权级
+
+- CPU 需要切换到哪个特权级来处理该 Trap 并在处理完成之后返回原特权级。
+
+在 RISC-V 架构中，关于 Trap 有一条重要的规则：在 Trap 前后特权级不会下降。
+
+*进入 S 特权级 Trap 的相关 CSR*
+
+| CSR 名  | 该 CSR 与 Trap 相关的功能                                    |
+| ------- | :----------------------------------------------------------- |
+| sstatus | `SPP` 字段给出 Trap 发生之前 CPU 处在哪个特权级（S/U）       |
+| sepc    | 当 Trap 是一个异常的时候，记录 Trap 发生之前执行的最后一条指令的地址 |
+| scause  | 描述 Trap 的原因                                             |
+| stval   | 给出 Trap 附加信息                                           |
+| stvec   | 控制 Trap 处理代码的入口地址                                 |
 
 ## 问题记录与反馈
 
@@ -47,7 +65,7 @@ RISC-V寄存器
 
 ![docker中运行](./extra/md_img/img1.png)![wsl2中运行](./extra/md_img/img2.png)
 
-
+补充，装有docker desktop，并且以wsl2模式运行，当在运行教程一开始提供的镜像时，就能产生上面的效果，当没有运行时，则和普通服务器中的运行结果一样（exec format error）。
 
 #### 第一章第五节 [构建裸机运行时执行环境](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/3-2-mini-rt-baremetal.html)
 
@@ -59,8 +77,9 @@ RISC-V寄存器
   panicked at 'Unhandled exception! mcause: Exception(StoreFault), mepc: 000000008000261c, mtval: 0000000000100000', platform/qemu/src/main.rs:395:18
   ```
   
+
 上面使用的`win64`的`qemu`，版本为：`QEMU emulator version 5.2.0 (v5.2.0-11850-g0f27b14b91-dirty)`。后在wsl2中使用提供的docker镜像环境测试，运行正常。
-  
+
 - [清空 .bss 段](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter1/3-2-mini-rt-baremetal.html#bss) 这个功能，教程里描述的是：
 
   > 我们需要提供清零的 `clear_bss()` 函数。此函数属于执行环境，并在执行环境调用 应用程序的 `rust_main` 主函数前，把 `.bss` 段的全局数据清零。
@@ -70,3 +89,39 @@ RISC-V寄存器
 #### 第二章第三节 [实现应用程序](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter2/2application.html)
 
 - [系统调用](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter2/2application.html#id6) 部分内容，讲到 "变量 `ret` 必须为可变 绑定"，经测试好像不需要。
+
+#### 第二章第四节 [实现批处理操作系统](https://rcore-os.github.io/rCore-Tutorial-Book-v3/chapter2/3batch-system.html)
+
+- bootloader不能使用第一章提供的那个，需要使用第二章里的那个，教程里没有提，让一直跟着教程一点一点做的人有点伤。而且错误的表现形式为：能执行user下的app，但在发生app数量多个时（5个的时候在执行loadapp函数后就会挂掉），或者异常时（只留了3个）会panicked。具体错误信息为：
+
+  > panicked at 'Unhandled exception! mcause: Exception(StoreFault), mepc: 00000000800400a2, mtval: 0000000000000000', platform/qemu/src/main.rs:395:18
+
+  其实在启动时，SBI会打印出不一样的信息，但由于对SBI不是很了解，所以没有具体去看。
+
+  ```shell
+  // 第二章提供的SBI打印出的信息
+  [rustsbi] Platform: QEMU
+  [rustsbi] misa: RV64ACDFIMSU
+  [rustsbi] mideleg: 0x222
+  [rustsbi] medeleg: 0xb1ab
+  [rustsbi] Kernel entry: 0x80020000
+  // ----------------------------------
+  // 第一章提供的SBI打印出的信息
+  [rustsbi] Platform: QEMU
+  [rustsbi] misa: RV64ACDFIMSU
+  [rustsbi] mideleg: 0x222
+  [rustsbi] medeleg: 0xb109
+  [rustsbi] Kernel entry: 0x80020000
+  ```
+
+  可以看到 `medeleg`的值不一样。通过粗略查询得知和上面的`mideleg`一起，为陷阱委托寄存器（`trap delegation registers`）。
+
+- 添加用户态app的数量过多时qemu会直接panic掉。
+
+  这里原因是代码里直接约定了`APP_BASE_ADDRESS`的地址为`0x80040000`，会在这之后进行数据操作（例如`oad_app`方法），当代码数据过多，超过这个地址时，即会发生错误。还有一个需要小心的点是修改user下的ld文件后在os中执行`make run`可能不会重新执行链接，如下为教程中提供的内存布局图和link文件，app在`.data`段：
+
+  ![内存布局](./extra/md_img/内存布局.png) ![link文件](./extra/md_img/link文件.png)
+
+- bootloader好像不能捕获第三节03、04的app里出现的非法指令错误，在rCore中运行03、04的app均会qemu pannic。
+
+因为rustsbi目前qemu的参考的实现还有部分问题，所以这里暂时更换为opensbi（需要修改一下内核和user的link地址）。
