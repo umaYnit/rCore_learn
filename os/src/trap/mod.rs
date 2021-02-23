@@ -1,6 +1,6 @@
 use riscv::register::{mtvec::TrapMode, scause::{self, Exception, Trap}, stval, stvec};
 
-use crate::batch::run_next_app;
+use crate::loader::run_next_app;
 use crate::syscall::syscall;
 pub use crate::trap::context::TrapContext;
 

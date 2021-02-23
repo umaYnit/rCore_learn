@@ -11,13 +11,12 @@ TARGET_DIR = "target/${TARGET}/${MODE}/"
 
 [tasks.elf]
 command = "cargo"
-args = ["build", "--release"]
+args = ["build", "--bin", "${@}", "--release", "--target", "${TARGET}"]
 
 [tasks.binary]
 command = "rust-objcopy"
 args = ["--binary-architecture=riscv64",
     "--strip-all", "-O", "binary", "${FILE_ELF}", "${FILE_BIN}"]
-dependencies = ["elf"]
 
 [tasks.build]
 script_runner = "@duckscript"
@@ -32,7 +31,41 @@ for path in ${handle}
     cm_run_task binary
 end
 '''
-dependencies = ["elf"]
+dependencies = ["_build"]
+
+[tasks._build]
+script_runner = "@rust"
+script = '''
+fn main() {
+    use std::{fs::{self,File},io::Write};
+
+    let base_address = 0x80400000usize;
+    let step = 0x20000usize;
+    let linker = "src/linker.ld";
+
+    let before_linker = fs::read_to_string(linker).unwrap();
+
+    for (app_id, entry) in fs::read_dir("src/bin").unwrap().enumerate() {
+        let path = entry.unwrap();
+        let app_name = path.file_name();
+        let app_name = app_name.to_string_lossy();
+        let app_name = app_name.trim_end_matches(".rs");
+
+
+        let new_address = base_address + step * app_id;
+        let new_linker = &before_linker.replace(&format!("{:#x}", base_address), &format!("{:#x}", new_address));
+
+        fs::write(linker, new_linker).unwrap();
+
+        if std::process::Command::new("cargo").args(&["make", "elf"]).arg(app_name)
+            .spawn().unwrap().wait().unwrap().success() != true { panic!() }
+
+        println!("[build] application {} start with address {:#x}", app_name, new_address);
+    }
+    fs::write(linker, before_linker).unwrap();
+}
+
+'''
 
 [tasks.clippy]
 command = "cargo"
