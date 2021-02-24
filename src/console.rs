@@ -1,5 +1,7 @@
 use core::fmt::{self, Write};
 
+use log::{Level, LevelFilter, Log, Metadata, Record};
+
 use crate::sbi::console_putchar;
 
 struct Stdout;
@@ -30,3 +32,52 @@ macro_rules! println {
         $crate::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
     }
 }
+
+
+pub fn init() {
+    static LOGGER: SimpleLogger = SimpleLogger;
+    log::set_logger(&LOGGER).unwrap();
+    log::set_max_level(match option_env!("LOG") {
+        Some(data) => {
+            match data {
+                "error" => LevelFilter::Error,
+                "warn" => LevelFilter::Warn,
+                "info" => LevelFilter::Info,
+                "debug" => LevelFilter::Debug,
+                "trace" => LevelFilter::Trace,
+                _ => LevelFilter::Off,
+            }
+        }
+        _ => LevelFilter::Off,
+    });
+}
+
+
+pub struct SimpleLogger;
+
+impl Log for SimpleLogger {
+    fn enabled(&self, _metadata: &Metadata) -> bool {
+
+        true
+    }
+
+    fn log(&self, record: &Record) {
+        println!("\x1b[{}m[{}]\t{}\x1b[0m",
+                 level_to_color_code(record.level()),
+                 record.level(),
+                 record.args());
+    }
+    fn flush(&self) {}
+}
+
+
+fn level_to_color_code(level: Level) -> u8 {
+    match level {
+        Level::Error => 31, // Red
+        Level::Warn => 93,  // BrightYellow
+        Level::Info => 34,  // Blue
+        Level::Debug => 32, // Green
+        Level::Trace => 90, // BrightBlack
+    }
+}
+
