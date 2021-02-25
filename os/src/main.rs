@@ -7,6 +7,10 @@
 
 #[macro_use]
 mod console;
+
+#[macro_use]
+mod utils;
+
 mod lang_items;
 mod sbi;
 mod batch;

@@ -9,10 +9,10 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             let stack_start = stack_end - USER_STACK_SIZE;
 
             let start = buf as usize;
-            let end = start + len;
 
-            if (start < stack_start || end > stack_end) &&
-                (start < APP_BASE_ADDRESS || end > APP_BASE_ADDRESS + APP_SIZE_LIMIT) {
+            if arr_not_in_scope!(start,len,
+            [stack_start,stack_start],
+            [APP_BASE_ADDRESS,APP_BASE_ADDRESS + APP_SIZE_LIMIT]) {
                 println!("[kernel] Invalid write message, start = {:#x} len = {}", start, len);
                 return -1;
             }
