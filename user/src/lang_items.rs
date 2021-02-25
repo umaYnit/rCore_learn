@@ -7,5 +7,5 @@ fn panic(info: &PanicInfo) -> ! {
     } else {
         println!("custom Panicked: {}", info.message().unwrap());
     }
-    loop {}
+    crate::sys_exit(-1)
 }

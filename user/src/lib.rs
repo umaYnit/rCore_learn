@@ -4,13 +4,14 @@
 #![feature(panic_info_message)]
 
 
+pub use console::STDOUT;
+
 use crate::syscall::{sys_exit, sys_write};
 
 #[macro_use]
 pub mod console;
 mod syscall;
 mod lang_items;
-
 
 fn clear_bss() {
     extern "C" {

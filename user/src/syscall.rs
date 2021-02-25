@@ -2,7 +2,7 @@ const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 
 
-fn syscall(id: usize, args: [usize; 3]) -> isize {
+pub fn syscall(id: usize, args: [usize; 3]) -> isize {
     let ret: isize;
     unsafe {
         llvm_asm!("ecall"
@@ -30,6 +30,7 @@ pub fn sys_write(fd: usize, buffer: &[u8]) -> isize {
 /// 参数：`xstate` 表示应用程序的返回值。
 /// 返回值：该系统调用不应该返回。
 /// syscall ID：93
-pub fn sys_exit(xstate: i32) -> isize {
-    syscall(SYSCALL_EXIT, [xstate as usize, 0, 0])
+pub fn sys_exit(xstate: i32) -> ! {
+    syscall(SYSCALL_EXIT, [xstate as usize, 0, 0]);
+    unreachable!();
 }
