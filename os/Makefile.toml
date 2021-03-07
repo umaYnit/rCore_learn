@@ -20,8 +20,9 @@ command = "cargo"
 args = ["make", "--cwd", "../user", "build"]
 
 [tasks.elf]
+env = { RELEASE_FLAG = { value = "--release", condition = { env = { "MODE" = "release" } } } }
 command = "cargo"
-args = ["build", "--release"]
+args = ["build", "@@trim(RELEASE_FLAG)"]
 dependencies = ["app"]
 
 [tasks.kernel]
@@ -31,21 +32,19 @@ args = ["--binary-architecture=riscv64",
 dependencies = ["elf"]
 
 [tasks.qemu]
-command = "${QEMU_BINARY}"
-args = ["-machine", "virt",
-    "-nographic",
-    "-bios", "${BOOTLOADER}",
-    "-device", "loader,file=${KERNEL_BIN},addr=${KERNEL_ENTRY_PA}"]
-dependencies = ["kernel"]
-
-[tasks.qemudebug]
+env = { DEBUG_FLAG = { source = "${MODE}", default_value = "", mapping = { "debug" = "-S -s" } } }
 command = "${QEMU_BINARY}"
 args = ["-machine", "virt",
     "-nographic",
     "-bios", "${BOOTLOADER}",
     "-device", "loader,file=${KERNEL_BIN},addr=${KERNEL_ENTRY_PA}",
-    "-S", "-s"]
+    "@@split(DEBUG_FLAG, )"]
 dependencies = ["kernel"]
+
+[tasks.debug]
+env = { MODE = "debug" }
+command = "cargo"
+args = ["make", "qemu"]
 
 [tasks.qemuasm]
 command = "${QEMU_BINARY}"
@@ -55,7 +54,6 @@ dependencies = ["kernel"]
 [tasks.clippy]
 command = "cargo"
 args = ["clippy", "@@split(COMPILER_ARGS, )"]
-
 
 # this issue: https://github.com/rust-embedded/cargo-binutils/issues/89
 [tasks.readelf]

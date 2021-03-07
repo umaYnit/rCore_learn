@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="debug_qemu" type="CLion_Remote" version="1" remoteCommand=":1234" symbolFile="$PROJECT_DIR$/target/riscv64gc-unknown-none-elf/debug/rcore_os" sysroot="">
+  <configuration default="false" name="debug_qemu" type="CLion_Remote" version="1" remoteCommand=":1234" symbolFile="$PROJECT_DIR$/os/target/riscv64gc-unknown-none-elf/debug/rcore_os" sysroot="">
     <debugger kind="GDB">C:\tools\riscv-utils\bin\riscv-none-embed-gdb.exe</debugger>
     <method v="2" />
   </configuration>
