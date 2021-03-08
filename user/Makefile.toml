@@ -10,8 +10,9 @@ APP_DIR = "src/bin"
 TARGET_DIR = "target/${TARGET}/${MODE}/"
 
 [tasks.elf]
+env = { RELEASE_FLAG = { value = "--release", condition = { env = { "MODE" = "release" } } } }
 command = "cargo"
-args = ["build", "--bin", "${@}", "--release", "--target", "${TARGET}"]
+args = ["build", "--bin", "${@}", "@@trim(RELEASE_FLAG)", "--target", "${TARGET}"]
 
 [tasks.binary]
 command = "rust-objcopy"
@@ -34,10 +35,11 @@ end
 dependencies = ["_build"]
 
 [tasks._build]
+env = { "CARGO_MAKE_RUST_SCRIPT_PROVIDER" = "cargo-script" }
 script_runner = "@rust"
 script = '''
 fn main() {
-    use std::{fs::{self,File},io::Write};
+    use std::fs;
 
     let base_address = 0x80400000usize;
     let step = 0x20000usize;
