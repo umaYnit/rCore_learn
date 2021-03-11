@@ -8,9 +8,7 @@ struct Stdout;
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        for c in s.chars() {
-            console_putchar(c as usize);
-        }
+        s.chars().map(|c| c as usize).for_each(console_putchar);
         Ok(())
     }
 }
@@ -57,7 +55,6 @@ pub struct SimpleLogger;
 
 impl Log for SimpleLogger {
     fn enabled(&self, _metadata: &Metadata) -> bool {
-
         true
     }
 
