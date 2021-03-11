@@ -1,12 +1,13 @@
+use fs::*;
+use process::*;
+pub use process::sys_exit;
+
 const SYSCALL_WRITE: usize = 64;
 const SYSCALL_EXIT: usize = 93;
 const SYSCALL_YIELD: usize = 124;
 
 mod fs;
 mod process;
-
-use fs::*;
-use process::*;
 
 pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
     match syscall_id {

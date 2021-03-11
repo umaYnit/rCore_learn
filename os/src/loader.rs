@@ -1,6 +1,6 @@
 use crate::config::*;
+use crate::task::TaskContext;
 use crate::trap::TrapContext;
-use lazy_static::*;
 
 #[repr(align(4096))]
 struct KernelStack {
@@ -12,18 +12,23 @@ struct UserStack {
     data: [u8; USER_STACK_SIZE],
 }
 
-static KERNEL_STACK: KernelStack = KernelStack { data: [0; KERNEL_STACK_SIZE] };
-static USER_STACK: UserStack = UserStack { data: [0; USER_STACK_SIZE] };
+const EMPTY_KERNEL_STACK: KernelStack = KernelStack { data: [0; KERNEL_STACK_SIZE] };
+const EMPTY_USER_STACK: UserStack = UserStack { data: [0; USER_STACK_SIZE] };
+
+static KERNEL_STACK: [KernelStack; MAX_APP_NUM] = [EMPTY_KERNEL_STACK; MAX_APP_NUM];
+static USER_STACK: [UserStack; MAX_APP_NUM] = [EMPTY_USER_STACK; MAX_APP_NUM];
 
 impl KernelStack {
     fn get_sp(&self) -> usize {
         self.data.as_ptr() as usize + KERNEL_STACK_SIZE
     }
-    pub fn push_context(&self, cx: TrapContext) -> &'static mut TrapContext {
-        let cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
+    pub fn push_context(&self, trap_cx: TrapContext, task_cx: TaskContext) -> &'static mut TaskContext {
         unsafe {
-            *cx_ptr = cx;
-            cx_ptr.as_mut().unwrap()
+            let trap_cx_ptr = (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
+            *trap_cx_ptr = trap_cx;
+            let task_cx_ptr = (trap_cx_ptr as usize - core::mem::size_of::<TaskContext>()) as *mut TaskContext;
+            *task_cx_ptr = task_cx;
+            task_cx_ptr.as_mut().unwrap()
         }
     }
 }
@@ -34,24 +39,19 @@ impl UserStack {
     }
 }
 
-static mut CURRENT_APP_ID: usize = 0;
-lazy_static! {
-    static ref NUM_APP: usize = {
-        extern "C" { fn _num_app(); }
-        let num_app_ptr = _num_app as usize as *const usize;
-        unsafe { num_app_ptr.read_volatile() }
-    };
-}
-
 fn get_base_i(app_id: usize) -> usize {
     APP_BASE_ADDRESS + app_id * APP_SIZE_LIMIT
 }
 
+pub fn get_num_app() -> usize {
+    extern "C" { fn _num_app(); }
+    unsafe { (_num_app as usize as *const usize).read_volatile() }
+}
 
 pub fn load_apps() {
     extern "C" { fn _num_app(); }
     let num_app_ptr = _num_app as usize as *const usize;
-    let num_app = unsafe { num_app_ptr.read_volatile() };
+    let num_app = get_num_app();
 
     let app_start = unsafe {
         core::slice::from_raw_parts(num_app_ptr.add(1), num_app + 1)
@@ -73,25 +73,9 @@ pub fn load_apps() {
     }
 }
 
-pub fn init() {
-    load_apps();
-}
-
-
-pub fn run_next_app() -> ! {
-    extern "C" { fn __restore(cx_addr: usize); }
-    let current_app_addr = get_base_i(unsafe { CURRENT_APP_ID });
-    println!("{:#X}", current_app_addr);
-    unsafe {
-        CURRENT_APP_ID += 1;
-        if CURRENT_APP_ID > *NUM_APP {
-            panic!("All applications completed!");
-        }
-    }
-    unsafe {
-        __restore(KERNEL_STACK.push_context(
-            TrapContext::app_init_context(current_app_addr, USER_STACK.get_sp())
-        ) as *const _ as usize);
-    }
-    panic!("Unreachable in batch::run_current_app!");
+pub fn init_app_cx(app_id: usize) -> &'static TaskContext {
+    KERNEL_STACK[app_id].push_context(
+        TrapContext::app_init_context(get_base_i(app_id), USER_STACK[app_id].get_sp()),
+        TaskContext::goto_restore(),
+    )
 }

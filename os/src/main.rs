@@ -4,7 +4,6 @@
 #![feature(global_asm)]
 #![feature(panic_info_message)]
 
-
 #[macro_use]
 mod console;
 mod lang_items;
@@ -32,6 +31,7 @@ pub fn rust_main() -> ! {
     clear_bss();
     println!("[kernel] Hello, world!");
     trap::init();
-    loader::init();
-    loader::run_next_app()
+    loader::load_apps();
+    task::run_first_task();
+    panic!("Unreachable in rust_main!");
 }

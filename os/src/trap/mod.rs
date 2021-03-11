@@ -1,7 +1,8 @@
-use riscv::register::{mtvec::TrapMode, scause::{self, Exception, Trap}, stval, stvec};
+use riscv::register::{mtvec::TrapMode, scause::{self, Exception, Trap}, sie, stval, stvec};
 
-use crate::loader::run_next_app;
+use crate::syscall::sys_exit;
 use crate::syscall::syscall;
+use crate::task::exit_current_and_run_next;
 pub use crate::trap::context::TrapContext;
 
 mod context;
@@ -26,11 +27,13 @@ pub fn trap_handler(cx: &mut TrapContext) -> &mut TrapContext {
         }
         Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
             println!("[kernel] PageFault in application, core dumped.");
-            run_next_app();
+            sys_exit(-1)
+            // run_next_app();
         }
         Trap::Exception(Exception::IllegalInstruction) => {
             println!("[kernel] IllegalInstruction in application, core dumped.");
-            run_next_app();
+            sys_exit(-1);
+            // run_next_app();
         }
         _ => panic!("Unsupported trap {:?}, stval = {:#x}!", scause.cause(), stval)
     }
