@@ -23,7 +23,11 @@ fn clear_bss() {
 }
 
 #[no_mangle]
-pub fn rust_main() {
+pub fn rust_main(hart_id: usize, _dtb_pa: usize) {
+    if hart_id != 0 {
+        return unsafe { llvm_asm!("wfi") };
+    }
+
     console::init();
     extern "C" {
         fn stext();
