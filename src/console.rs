@@ -1,6 +1,7 @@
 use core::fmt::{self, Write};
 
-use log::{Level, LevelFilter, Log, Metadata, Record};
+use log::{debug, Level, LevelFilter, Log, Metadata, Record};
+use spin::Mutex;
 
 use crate::sbi::console_putchar;
 
@@ -14,6 +15,8 @@ impl Write for Stdout {
 }
 
 pub fn print(args: fmt::Arguments) {
+    static LOCK: Mutex<()> = Mutex::new(());
+    let _guard = LOCK.lock();
     Stdout.write_fmt(args).unwrap();
 }
 
@@ -32,7 +35,19 @@ macro_rules! println {
 }
 
 
-pub fn init() {
+
+pub fn init(hart_id: usize) {
+    use core::sync::atomic::{AtomicBool, Ordering};
+    // 只初始化一次
+    static INITED: AtomicBool = AtomicBool::new(false);
+    if INITED.compare_exchange(false,
+                               true,
+                               Ordering::Acquire,
+                               Ordering::Relaxed)
+        .is_err() {
+        return;
+    }
+
     static LOGGER: SimpleLogger = SimpleLogger;
     log::set_logger(&LOGGER).unwrap();
     log::set_max_level(match option_env!("LOG") {
@@ -48,6 +63,8 @@ pub fn init() {
         }
         _ => LevelFilter::Off,
     });
+
+    debug!("[{}] init color log", hart_id);
 }
 
 

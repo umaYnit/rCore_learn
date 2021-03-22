@@ -24,11 +24,7 @@ fn clear_bss() {
 
 #[no_mangle]
 pub fn rust_main(hart_id: usize, _dtb_pa: usize) {
-    if hart_id != 0 {
-        return unsafe { llvm_asm!("wfi") };
-    }
-
-    console::init();
+    console::init(hart_id);
     extern "C" {
         fn stext();
         fn etext();
@@ -52,4 +48,8 @@ pub fn rust_main(hart_id: usize, _dtb_pa: usize) {
     );
     println!(".bss [{:#x}, {:#x})", sbss as usize, ebss as usize);
     panic!("Shutdown machine!");
+    // 需要判断是否所有核都执行完
+    // loop {
+    //     unsafe { llvm_asm!("wfi") }
+    // }
 }
