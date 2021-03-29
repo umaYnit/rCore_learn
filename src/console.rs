@@ -9,7 +9,7 @@ struct Stdout;
 
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        s.chars().map(|c| c as usize).for_each(console_putchar);
+        s.bytes().map(|c| c as usize).for_each(console_putchar);
         Ok(())
     }
 }

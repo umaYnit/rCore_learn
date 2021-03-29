@@ -38,7 +38,7 @@ pub fn rust_main(hart_id: usize, _dtb_pa: usize) {
         fn boot_stack_top();
     }
     clear_bss();
-    println!("Hello, world!");
+    println!("Hello, world! 你好，世界");
     info!(".text [{:#x}, {:#x})", stext as usize, etext as usize);
     debug!(".rodata [{:#x}, {:#x})", srodata as usize, erodata as usize);
     error!(".data [{:#x}, {:#x})", sdata as usize, edata as usize);
